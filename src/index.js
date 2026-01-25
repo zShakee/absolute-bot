@@ -33,8 +33,11 @@ for(const file of commandFiles){
 		}
 }
 
+const iniciarScheduler = require("./scheduler/dicas");
+
 client.once(Events.ClientReady, (readyClient) => {
-  console.log(`🤖 Ready! Logged in as ${readyClient.user.tag}`);
+    iniciarScheduler(client);
+    console.log(`🤖 Ready! Logged in as ${readyClient.user.tag}`);
 });
 
 client.login(TOKEN);

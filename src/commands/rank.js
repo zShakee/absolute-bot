@@ -5,7 +5,7 @@ const ganhadoresPath = path.join(__dirname,"../data/ganhadores.json");
 
 module.exports = {
 	data: new SlashCommandBuilder().setName('rank')
-        .setDescription('🏅Exibe o ranking atual do QSE'),
+        .setDescription('Exibe o rank atual do QSE'),
 	async execute(interaction) {
         
          if (!fs.existsSync(ganhadoresPath)) {

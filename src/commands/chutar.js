@@ -66,12 +66,12 @@ module.exports = {
         );
 
         
-        if(jaChutouHoje){
+       /* if(jaChutouHoje){
             return interaction.reply({
                 content:"❌ Você já chutou hoje. Novo chute libera às 14h 🇧🇷",
                 ephemeral: true
             });
-        }
+        }*/
 
         const filmeJaChutado = Object.values(chutes).some(lista => {
             if (!Array.isArray(lista)) return false;

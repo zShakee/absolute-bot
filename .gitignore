@@ -1,2 +1,5 @@
-node_modules/
+node_modules
 .env
+src/data/chutes.json
+src/data/filmes-atual.json
+src/data/ganhadores.json

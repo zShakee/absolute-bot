@@ -1,0 +1,6 @@
+node_modules
+.git
+.env
+/src/data/chutes.json
+/src/data/filmes-atual.json
+#/src/data/ganhadores.json

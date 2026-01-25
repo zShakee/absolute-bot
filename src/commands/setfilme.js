@@ -14,10 +14,30 @@ module.exports = {
                         .setDescription("Nome do filme")
                         .setRequired(true)
                 )
-                .addStringOption(opt => 
-                    opt.setName("dica")
-                        .setDescription("Dicas separadas por '/' ")
-                        .setRequired(true)
+                .addStringOption(opt =>
+                    opt.setName("dica1")
+                    .setDescription("URL da dica 1")
+                    .setRequired(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName("dica2")
+                    .setDescription("URL da dica 2")
+                    .setRequired(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName("dica3")
+                    .setDescription("URL da dica 3")
+                    .setRequired(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName("dica4")
+                    .setDescription("URL da dica 4")
+                    .setRequired(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName("dica5")
+                    .setDescription("URL da dica 5")
+                    .setRequired(true)
                 )
                 ,
 	async execute(interaction) {
@@ -29,10 +49,13 @@ module.exports = {
         });
 
         const titulo = interaction.options.getString("titulo")
-        const dicas = interaction.options.getString("dica")
-            .split("/")
-            .map(d => d.trim())
-            .filter(Boolean);
+        const dicas = [
+            interaction.options.getString("dica1"),
+            interaction.options.getString("dica2"),
+            interaction.options.getString("dica3"),
+            interaction.options.getString("dica4"),
+            interaction.options.getString("dica5")
+        ]
 
         const {searchMovie} = require("../services/tmdb");
         const filmes = await searchMovie(titulo);
@@ -52,9 +75,10 @@ module.exports = {
         const novoFilme = {
             id: filme.id,
             titulo: filme.title,
+            inicio: new Date().toISOString().slice(0, 10),
             dicas,
-            banner: banner,
-            inicio: new Date().toISOString().slice(0, 10)
+            banner,
+            ultimaDicaLiberada: -1
         };
 
         fs.writeFileSync(
