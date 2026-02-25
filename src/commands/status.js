@@ -1,94 +1,109 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle 
-} = require("discord.js");
-const { getGameDay } = require("../utils/gameday.js");
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const fs = require("node:fs");
-const path = require("node:path")
+const path = require("node:path");
+const { checkGameChannel } = require("../utils/checkChannel.js");
+const { titleCase } = require("../utils/format.js"); // Supondo que esteja aqui
 
 const chutesPath = path.join(__dirname, "../data/chutes.json");
-const filmePath = path.join(__dirname,"../data/filme-atual.json");
+const filmePath = path.join(__dirname, "../data/filme-atual.json");
 const PAGE_SIZE = 20;
 
 module.exports = {
-	data: new SlashCommandBuilder().setName('status')
-                .setDescription('Retorna todos os chutes feitos para esse filme')
-    ,
-	async execute(interaction) {
-        if (!fs.existsSync(chutesPath)) {
-            return interaction.reply({
-                content: "📭 Nenhum chute registrado ainda.",
-                ephemeral: true
+    data: new SlashCommandBuilder()
+        .setName('status')
+        .setDescription('Retorna todos os chutes feitos para esse filme'),
+
+    async execute(interaction) {
+        //if (!checkGameChannel(interaction)) return;
+
+        // Apenas chama a função compartilhada pedindo a página 0
+        // false = não é update (é uma nova mensagem)
+        await atualizarPaginaStatus(interaction, 0, false);
+    },
+
+    // Exportamos a função AQUI para o index.js poder usar
+    atualizarPaginaStatus 
+};
+
+/**
+ * Função agora é independente: ela busca os dados e monta a tela.
+ * Pode ser chamada pelo comando (/status) ou pelo botão (index.js).
+ */
+async function atualizarPaginaStatus(interaction, pagina, isUpdate = true) {
+    
+    // 1. Verificações de Arquivo (Recarregamos para garantir dados frescos)
+    if (!fs.existsSync(chutesPath) || !fs.existsSync(filmePath)) {
+        const msg = { content: "📭 Nenhum dado encontrado ou jogo não iniciado.", ephemeral: true, components: [] };
+        // Se for botão, remove os botões antigos. Se for comando, avisa.
+        return isUpdate ? interaction.update(msg) : interaction.reply(msg);
+    }
+
+    // 2. Processar Dados
+    const chutes = JSON.parse(fs.readFileSync(chutesPath, "utf-8"));
+    const lista = [];
+
+    // Lógica para varrer o JSON e montar a lista plana
+    for (const userID in chutes) {
+        if (!Array.isArray(chutes[userID])) continue;
+        for (const c of chutes[userID]) {
+            lista.push({ 
+                // Garante que funciona com 'title' ou 'chute'
+                filme: titleCase(c.title || c.chute), 
+                userID 
             });
         }
-
-        let filme = null;
-        
-        if(fs.existsSync(filmePath)){
-            filme = JSON.parse(fs.readFileSync(filmePath,"utf-8"));
-        }
-        else{
-            return interaction.reply({
-                content: "Filme ainda não foi setado!",
-                ephemeral: true
-            })
-        }
-        
-        const chutes = JSON.parse(fs.readFileSync(chutesPath,"utf-8"));
-        const lista = [];
-        const { titleCase } = require("../utils/format.js");
-
-        for(const userID in chutes){
-            if (!Array.isArray(chutes[userID])) continue;
-             for (const c of chutes[userID]) {
-                lista.push({ filme: titleCase(c.title), userID });
-             }
-        }
-
-        if(lista.length === 0){
-            return interaction.reply({
-                content: "📭 Nenhum chute foi registrado ainda!",
-                ephemeral: true
-            })
-        }
-
-        await enviarPagina(interaction, lista, 0);
     }
-}
 
-async function enviarPagina(interaction, lista, pagina) {
+    if (lista.length === 0) {
+        const msg = { content: "📭 Nenhum chute registrado.", ephemeral: true, components: [] };
+        return isUpdate ? interaction.update(msg) : interaction.reply(msg);
+    }
 
-  const inicio = pagina * PAGE_SIZE;
-  const fim = inicio + PAGE_SIZE;
-  const paginaItens = lista.slice(inicio, fim);
+    // 3. Cálculos de Paginação
+    const totalPages = Math.ceil(lista.length / PAGE_SIZE);
+    
+    // Proteção contra índices inválidos (caso deletem chutes enquanto alguém navega)
+    if (pagina >= totalPages) pagina = totalPages - 1;
+    if (pagina < 0) pagina = 0;
 
-  const filmes = paginaItens.map(i => i.filme).join("\n");
-  const usuarios = paginaItens.map(i => `<@${i.userID}>`).join("\n");
+    const inicio = pagina * PAGE_SIZE;
+    const fim = inicio + PAGE_SIZE;
+    const paginaItens = lista.slice(inicio, fim);
 
-  const embed = new EmbedBuilder()
+    // 4. Montar Embed
+    const listaFormatada = paginaItens.map((item, index) => {
+    return `**🎥 ${item.filme}** <@${item.userID}>`;
+}).join("\n\n"); // \n\n dá um espaçamento extra entre os itens
+
+    const embed = new EmbedBuilder()
     .setTitle("🎬 Histórico de Chutes")
     .setColor(0x5865F2)
-    .addFields(
-      { name: "🎥 Filme", value: filmes, inline: true },
-      { name: "👤 Jogador", value: usuarios, inline: true }
-    )
-    .setFooter({ text: `Página ${pagina + 1} de ${Math.ceil(lista.length / PAGE_SIZE)}` });
+    .setDescription(listaFormatada || "Nenhum dado nesta página.") // Usamos Description ao invés de Fields
+    .setFooter({ text: `Página ${pagina + 1} de ${totalPages} • Total de chutes: ${lista.length}` });
 
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`chutes_prev_${pagina}`)
-      .setLabel("◀")
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(pagina === 0),
+    // 5. Botões (Lógica mantida)
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`chutes_prev_${pagina}`) // ID que o index.js vai ler
+            .setLabel("◀")
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(pagina === 0),
 
-    new ButtonBuilder()
-      .setCustomId(`chutes_next_${pagina}`)
-      .setLabel("▶")
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(fim >= lista.length)
-  );
+        new ButtonBuilder()
+            .setCustomId(`chutes_next_${pagina}`)
+            .setLabel("▶")
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(pagina >= totalPages - 1) // Desativa se for a última página
+    );
 
-  if (interaction.replied || interaction.deferred) {
-    await interaction.editReply({ embeds: [embed], components: [row] });
-  } else {
-    await interaction.reply({ embeds: [embed], components: [row] });
-  }
+    const payload = { embeds: [embed], components: [row] };
+
+    // 6. Enviar
+    if (isUpdate) {
+        // Se veio do clique do botão, atualizamos a mensagem existente
+        await interaction.update(payload);
+    } else {
+        // Se veio do comando /status, criamos uma nova resposta
+        await interaction.reply(payload);
+    }
 }

@@ -8,7 +8,7 @@ const filmePath = path.join(__dirname, "../data/filme-atual.json");
 module.exports = function iniciarScheduler(client) {
 
     cron.schedule(
-        "*/1 * * * *",
+         "0 14 * * *",
         async () => {
             try {
                 console.log("⏰ Cron disparou");
@@ -33,7 +33,7 @@ module.exports = function iniciarScheduler(client) {
                 }
 
                 const canal = client.channels.cache.get(
-                    process.env.CANAL_JOGO_ID
+                    process.env.CHANNEL_ID
                 );
 
                 if (!canal) return;

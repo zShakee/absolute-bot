@@ -14,6 +14,13 @@ module.exports = {
                         .setDescription("Nome do filme")
                         .setRequired(true)
                 )
+                .addIntegerOption(option =>
+                    option.setName("ano")
+                    .setDescription("Ano de lançamento do filme")
+                    .setMinValue(1888) // O primeiro filme da história foi em 1888!
+                    .setMaxValue(new Date().getFullYear() + 1) // Limita ao ano atual ou próximo
+                    .setRequired(true)
+                )
                 .addStringOption(opt =>
                     opt.setName("dica1")
                     .setDescription("URL da dica 1")
@@ -47,8 +54,10 @@ module.exports = {
                 content: "❌ Você não tem permissão para usar este comando.",
                 ephemeral: true
         });
+        
 
         const titulo = interaction.options.getString("titulo")
+        const ano = interaction.options.getInteger("ano")
         const dicas = [
             interaction.options.getString("dica1"),
             interaction.options.getString("dica2"),
@@ -58,7 +67,7 @@ module.exports = {
         ]
 
         const {searchMovie} = require("../services/tmdb");
-        const filmes = await searchMovie(titulo);
+        const filmes = await searchMovie(titulo, ano);
         
         if(filmes.length === 0){
             return interaction.reply({

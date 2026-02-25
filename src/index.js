@@ -53,13 +53,21 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
         try{
           await command.execute(interaction);
-        }
-        catch(error){
-          console.error(error);
-          await interaction.reply("Houve um erro ao executar o comando!");
-        }
+        }catch (error) {
+            console.error(error);
+            
+            // Se o comando já respondeu (replied) ou está esperando (deferred), 
+            // usamos followUp para não causar o erro 40060
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp({ content: 'Houve um erro ao executar o comando!', ephemeral: true });
+            } else {
+                await interaction.reply({ content: 'Houve um erro ao executar o comando!', ephemeral: true });
+            }
         return;
+        }
     }
+
+    const { atualizarPaginaStatus } = require("./commands/status.js");
 
     if(interaction.isButton()){
         if (!interaction.customId.startsWith("chutes_")) return;
@@ -72,7 +80,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
             : pagina - 1;
 
         // Aqui você chama a função que renderiza a página
-        await atualizarPaginaChutes(interaction, novaPagina);
+        await atualizarPaginaStatus(interaction, novaPagina, true);
         return;
     }
 })

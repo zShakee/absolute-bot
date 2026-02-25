@@ -13,16 +13,28 @@ module.exports = {
                     opt.setName("filme")
                         .setDescription("nome do filme")
                         .setRequired(true)
-                ),
+                )
+                .addIntegerOption(option =>
+                    option.setName("ano")
+                    .setDescription("Ano de lançamento do filme (opcional)")
+                    .setMinValue(1888) // O primeiro filme da história foi em 1888!
+                    .setMaxValue(new Date().getFullYear() + 1) // Limita ao ano atual ou próximo
+                )
+                ,
 
 	async execute(interaction) {
 
+        //const { checkGameChannel } = require("../utils/checkChannel.js")
+
+        //if(!checkGameChannel(interaction)) return;
+
         const chute = interaction.options.getString("filme").trim().toLowerCase();
+        const ano = interaction.options.getInteger("ano");
         const userID = interaction.user.id;
         const hoje = getGameDay();
 
         const { searchMovie } = require("../services/tmdb.js");
-        const filmes = await searchMovie(chute);
+        const filmes = await searchMovie(chute, ano);
 
         if(filmes.length === 0){
             return interaction.reply({
@@ -66,12 +78,15 @@ module.exports = {
         );
 
         
-       /* if(jaChutouHoje){
+       if(jaChutouHoje){
             return interaction.reply({
                 content:"❌ Você já chutou hoje. Novo chute libera às 14h 🇧🇷",
                 ephemeral: true
             });
-        }*/
+        }
+        
+        
+        
 
         const filmeJaChutado = Object.values(chutes).some(lista => {
             if (!Array.isArray(lista)) return false;
@@ -85,9 +100,14 @@ module.exports = {
             });
         }
 
-        const banner = chuteIMDB.poster_path
-        ? `https://image.tmdb.org/t/p/w500${chuteIMDB.poster_path}`
-        : null;
+        const thumbnail = chuteIMDB.poster_path 
+            ? `https://image.tmdb.org/t/p/original${chuteIMDB.poster_path}` 
+            : null;
+
+
+        const banner = chuteIMDB.backdrop_path 
+            ? `https://image.tmdb.org/t/p/w1280${chuteIMDB.backdrop_path}` 
+            : null;
         
         chutes[userID].push({
             id: chuteIMDB.id,
@@ -97,6 +117,8 @@ module.exports = {
         });
 
         fs.writeFileSync(chutesPath, JSON.stringify(chutes, null, 2))
+        const luas = gerarFasesDaLua(chuteIMDB.vote_average);
+        const notaFormatada = (chuteIMDB.vote_average/2).toFixed(1);
         
         if(chuteIMDB.id === filme.id){
 
@@ -120,17 +142,33 @@ module.exports = {
             }
 
             ganhadores[userID].vitorias++;
-
+            
             fs.writeFileSync(ganhadoresPath,JSON.stringify(ganhadores, null, 2))
+            
 
             const embed = new EmbedBuilder()
-                .setTitle("🎉 Temos um vencedor!")
+                .setTitle(`🎉 TEMOS UM VENCEDOR!!`)
                 .setDescription(
-                    `${interaction.user} acertou o filme da semana!\n\n🎬 **${filme.titulo}**`
+                    `Parabéns ${interaction.user}! Você acertou em cheio.\n\n` + 
+                        `O filme da semana era **${chuteIMDB.title}**`
                 )
                 .setColor(0x57F287)
                 .setTimestamp()
+                .setThumbnail(thumbnail)
+                .addFields(
+                    { 
+                        name: "📅 Ano de lançamento", 
+                        value: chuteIMDB.release_date?.split("-")[0] || "N/A", 
+                        inline: true 
+                    },
+                    { 
+                        name: "⭐ Avaliação dos usuários", 
+                        value: `${luas} ${notaFormatada}`, inline: true 
+                    },
+                )
                 .setImage(banner)
+                .setFooter({ text: "Uma nova rodada começará em breve!" })
+                .setTimestamp();
 
             return interaction.reply({
                 embeds: [embed]
@@ -138,19 +176,54 @@ module.exports = {
          }
 
 
+
         const embed = new EmbedBuilder()
             .setTitle("❌ Filme errado!")
-            .setDescription(chuteIMDB.title)
+            //.setThumbnail(thumbnail) //cartaz vertical
+            .setDescription(`Você achou que era **${chuteIMDB.title}** mas a busca continua`)
+            .setImage(thumbnail) //o fundo
             .setFooter({
                 text: `Chutado por ${interaction.user.username}`,
                 iconURL: interaction.user.displayAvatarURL()
             })
-            .setColor(0xFF0000)
+            .addFields(
+                { name: "📅 Ano de lançamento", value: chuteIMDB.release_date?.split("-")[0] || "N/A", inline: true },
+                { name: "⭐ Avaliação dos usuários", value: `${luas} ${notaFormatada}`, inline: true }
+            )
+            .setColor(0x992D22)
             .setTimestamp()
-            .setImage(banner)
 
         return interaction.reply({
             embeds: [embed]
         });
     }
 };
+
+function gerarFasesDaLua(nota) {
+    // 1. Convertemos a escala de 10 para 5
+    const notaCinco = nota / 2; 
+    
+    const cheias = Math.floor(notaCinco); // Quantas luas cheias
+    const resto = notaCinco - cheias;    // O que sobrou (ex: 0.7)
+    
+    let resultado = "★".repeat(cheias);
+
+    // 2. Lógica para a Meia Lua
+    // Se o resto for entre 0.25 e 0.75, colocamos uma meia lua
+    // Se for maior que 0.75, arredondamos para uma cheia
+    if (resto >= 0.25 && resto <= 0.75) {
+        resultado += "⯪";
+    } else if (resto > 0.75) {
+        resultado += "★";
+    }
+
+    // 3. Preenche o restante com Luas Novas (vazias) até completar 5 ícones
+    const totalIcones = resultado.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g)?.length || resultado.length;
+    const vazias = 5 - totalIcones;
+    
+    if (vazias > 0) {
+        resultado += "☆".repeat(vazias);
+    }
+
+    return resultado;
+}
