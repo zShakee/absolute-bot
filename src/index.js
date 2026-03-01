@@ -52,6 +52,15 @@ client.once(Events.ClientReady, (readyClient) => {
     console.log(`🤖 Ready! Logged in as ${readyClient.user.tag}`);
 });
 
+
+console.log("Tentando logar no Discord...");
+if (!TOKEN) console.error("ERRO: A variável TOKEN está vazia! Verifique o painel do Render.");
+
+client.login(TOKEN).catch(err => {
+    console.error("ERRO CRÍTICO NO LOGIN:");
+    console.error(err);
+});
+
 client.login(TOKEN);
 
 //listener das interações
