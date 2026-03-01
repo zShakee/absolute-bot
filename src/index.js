@@ -54,6 +54,28 @@ client.once(Events.ClientReady, (readyClient) => {
 
 
 console.log("Tentando logar no Discord...");
+
+console.log("Tentando logar no Discord...");
+
+// Teste de sanidade: verifica se o TOKEN existe (não mostra o valor por segurança)
+if (!TOKEN || TOKEN.length < 10) {
+    console.error("❌ ERRO: O TOKEN está vazio ou é curto demais. Verifique a aba 'Environment' no Render!");
+}
+
+client.login(TOKEN).catch(err => {
+    console.error("❌ FALHA CRÍTICA NO LOGIN DO DISCORD:");
+    console.error(err.message); // Isso vai nos dizer se o token é inválido ou se há erro de rede
+});
+
+client.once(Events.ClientReady, (readyClient) => {
+    try {
+        iniciarScheduler(client);
+        console.log(`🤖 Ready! Logged in as ${readyClient.user.tag}`);
+    } catch (e) {
+        console.error("⚠️ Erro ao iniciar Scheduler:", e);
+    }
+});
+
 if (!TOKEN) console.error("ERRO: A variável TOKEN está vazia! Verifique o painel do Render.");
 
 client.login(TOKEN).catch(err => {
