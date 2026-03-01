@@ -1,4 +1,4 @@
-const { Client, Events, GatewayIntentBits, Collection } = require("discord.js");
+/*const { Client, Events, GatewayIntentBits, Collection } = require("discord.js");
 const dotenv = require("dotenv");
 const express = require('express');
 const fs = require("node:fs");
@@ -73,6 +73,62 @@ if (!TOKEN) {
 } else {
     client.login(TOKEN).catch(err => {
         console.error("❌ FALHA CRÍTICA NO LOGIN:");
+        console.error(err.message);
+    });
+}*/
+
+const { Client, Events, GatewayIntentBits, Collection } = require("discord.js");
+const express = require('express');
+const fs = require("node:fs");
+const path = require("node:path");
+
+// 1. Servidor Express (Obrigatório para o Render)
+const app = express();
+const port = process.env.PORT || 3000;
+app.get('/', (req, res) => res.send('Bot Ativo'));
+app.listen(port, () => console.log(`📡 Servidor na porta ${port}`));
+
+// 2. Verificação de Variáveis (Debug)
+console.log("--- DEBUG DE AMBIENTE ---");
+console.log("Variável TOKEN existe?", !!process.env.TOKEN);
+if (process.env.TOKEN) {
+    console.log("Comprimento do TOKEN:", process.env.TOKEN.length);
+    console.log("Primeiros 5 caracteres:", process.env.TOKEN.substring(0, 5));
+}
+console.log("-----------------------");
+
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+client.commands = new Collection();
+
+// 3. Carregar Comandos (Com try/catch para não travar o bot)
+const commandsPath = path.join(__dirname, "commands");
+try {
+    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+    for (const file of commandFiles) {
+        const filePath = path.join(commandsPath, file);
+        const command = require(filePath);
+        if ("data" in command && "execute" in command) {
+            client.commands.set(command.data.name, command);
+        }
+    }
+} catch (err) {
+    console.error("❌ Erro ao carrerar comandos:", err.message);
+}
+
+// 4. Evento Ready
+client.once(Events.ClientReady, c => {
+    console.log(`✅ Logado com sucesso como ${c.user.tag}`);
+});
+
+// 5. Login Único
+const TOKEN = process.env.TOKEN;
+
+if (!TOKEN) {
+    console.error("❌ ERRO FATAL: TOKEN não encontrado no process.env!");
+} else {
+    console.log("Tentando login...");
+    client.login(TOKEN).catch(err => {
+        console.error("❌ ERRO NO LOGIN DO DISCORD:");
         console.error(err.message);
     });
 }
