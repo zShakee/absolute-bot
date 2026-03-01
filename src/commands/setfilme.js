@@ -8,7 +8,7 @@ const chutesPath = path.join(__dirname, "../data/chutes.json");
 module.exports = {
 	data: new SlashCommandBuilder().setName('setfilme')
                 .setDescription('Define o nome do filme da semana')
-                .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+                //.setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
                 .addStringOption(opt =>
                     opt.setName("titulo")
                         .setDescription("Nome do filme")

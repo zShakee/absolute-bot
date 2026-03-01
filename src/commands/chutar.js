@@ -24,9 +24,9 @@ module.exports = {
 
 	async execute(interaction) {
 
-        //const { checkGameChannel } = require("../utils/checkChannel.js")
+        const { checkGameChannel } = require("../utils/checkChannel.js")
 
-        //if(!checkGameChannel(interaction)) return;
+        if(!checkGameChannel(interaction)) return;
 
         const chute = interaction.options.getString("filme").trim().toLowerCase();
         const ano = interaction.options.getInteger("ano");
